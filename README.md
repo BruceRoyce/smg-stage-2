@@ -16,6 +16,8 @@ Supporting material:
 - [Discovery & working notes](./working-notes.md)
 - [(PDF) Rendered working notes with sketches](./working-notes.pdf)
 - [Appendix — Working Interpretation of the Technical Brief](appendix-working-Interpretation-of-the-technical-brief.md)
+- [AI tooling reflection](./ai_tooling_reflection.md)
+- [(PDF) Rendered AI tooling reflection](./ai_tooling_reflection.pdf)
 
 The main design submission is authoritative. Working notes intentionally
 retain hypotheses and interpretations that were later refined or rejected.
