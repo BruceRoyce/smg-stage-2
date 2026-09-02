@@ -16,15 +16,15 @@ The original technical brief remains the source of truth. If anything in this ap
 
 The following labels are used throughout:
 
-**BRIEF** — directly stated or unambiguously established by the original task.
+**BRIEF** - directly stated or unambiguously established by the original task.
 
-**DERIVED** — a conclusion that follows from combining statements in the brief, but is not stated verbatim.
+**DERIVED** - a conclusion that follows from combining statements in the brief, but is not stated verbatim.
 
-**ASSUMPTION** — a deliberate choice made because the brief leaves something unspecified.
+**ASSUMPTION** - a deliberate choice made because the brief leaves something unspecified.
 
-**AMBIGUITY** — something for which more than one reasonable interpretation remains possible.
+**AMBIGUITY** - something for which more than one reasonable interpretation remains possible.
 
-**DESIGN IMPLICATION** — a consequence worth considering when designing the solution, but not itself a requirement supplied by the brief.
+**DESIGN IMPLICATION** - a consequence worth considering when designing the solution, but not itself a requirement supplied by the brief.
 
 ---
 
@@ -1158,29 +1158,29 @@ The Traders are the concurrent system actors.
 
 The following assumptions are intentionally adopted so that design work can proceed without silently inventing unspecified business rules.
 
-| Topic | Working assumption | Status / reason |
-|---|---|---|
-| Trader | Human/operator assembling Campaigns in response to Advertiser demand | Derived from one Retailer vs 20–30 Traders and the Campaign wording |
-| Trader employer | Unspecified | Genuine ambiguity; irrelevant to core inventory correctness |
-| Advertiser | Commercial party whose advertising requirement is being fulfilled | Derived; exact contractual/payment relationship unspecified |
-| Advertiser self-service | Not modelled | Scope assumption; brief specifically describes Trader interaction |
-| Campaign ownership | Not asserted | Brief establishes association and Trader assembly, not formal ownership |
-| Media time | Bookings run only in fixed consecutive Cycles | Explicit brief requirement |
-| Hold time | Hold expiry may use workflow clock time | Necessary assumption to reconcile expiry with Cycle-based media scheduling |
-| Physical capacity | Primarily Store × Format | Derived from physical units described by the brief |
-| Booking context | Store × Format × Cycle | Derived from bookings being Cycle-specific |
-| Unit identity | Same-Format units initially treated as fungible quantity | Simplification; independent quantity booking still preserved |
-| Availability | Derived from physical capacity, Confirmed bookings and active Holds | Explicitly implied by brief |
-| Hold | Blocks normal inventory while active | Explicit brief requirement |
-| Partial result | Supported | Explicitly required across Stores |
-| Expiry policy | Unspecified; use a simple baseline in the design | Brief supplies no duration/policy |
-| Expired Hold | No longer blocks inventory | Natural consequence of “Holds expire” |
-| Expired capacity | Returns to ordinary availability | Assumption; no reassignment policy supplied |
-| Priority after expiry | None assumed | No waiting-list, auction or priority rule supplied |
-| Exception meaning | Working model is authorised departure above normal availability/capacity | Assumption chosen because brief links exceptions to overselling |
-| Hold displacement | Not assumed | Brief does not explicitly say active Holds may be stolen/overridden |
-| Oversell authority | Human/commercially authorised, exact role unspecified | Brief distinguishes Traders pushing from commercial teams accepting risk |
-| Exceptional capacity semantics | To be defined in solution | Brief does not say whether Holds, Confirmations or particular Campaigns consume it |
+| Topic                          | Working assumption                                                       | Status / reason                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Trader                         | Human/operator assembling Campaigns in response to Advertiser demand     | Derived from one Retailer vs 20–30 Traders and the Campaign wording                |
+| Trader employer                | Unspecified                                                              | Genuine ambiguity; irrelevant to core inventory correctness                        |
+| Advertiser                     | Commercial party whose advertising requirement is being fulfilled        | Derived; exact contractual/payment relationship unspecified                        |
+| Advertiser self-service        | Not modelled                                                             | Scope assumption; brief specifically describes Trader interaction                  |
+| Campaign ownership             | Not asserted                                                             | Brief establishes association and Trader assembly, not formal ownership            |
+| Media time                     | Bookings run only in fixed consecutive Cycles                            | Explicit brief requirement                                                         |
+| Hold time                      | Hold expiry may use workflow clock time                                  | Necessary assumption to reconcile expiry with Cycle-based media scheduling         |
+| Physical capacity              | Primarily Store × Format                                                 | Derived from physical units described by the brief                                 |
+| Booking context                | Store × Format × Cycle                                                   | Derived from bookings being Cycle-specific                                         |
+| Unit identity                  | Same-Format units initially treated as fungible quantity                 | Simplification; independent quantity booking still preserved                       |
+| Availability                   | Derived from physical capacity, Confirmed bookings and active Holds      | Explicitly implied by brief                                                        |
+| Hold                           | Blocks normal inventory while active                                     | Explicit brief requirement                                                         |
+| Partial result                 | Supported                                                                | Explicitly required across Stores                                                  |
+| Expiry policy                  | Unspecified; use a simple baseline in the design                         | Brief supplies no duration/policy                                                  |
+| Expired Hold                   | No longer blocks inventory                                               | Natural consequence of “Holds expire”                                              |
+| Expired capacity               | Returns to ordinary availability                                         | Assumption; no reassignment policy supplied                                        |
+| Priority after expiry          | None assumed                                                             | No waiting-list, auction or priority rule supplied                                 |
+| Exception meaning              | Working model is authorised departure above normal availability/capacity | Assumption chosen because brief links exceptions to overselling                    |
+| Hold displacement              | Not assumed                                                              | Brief does not explicitly say active Holds may be stolen/overridden                |
+| Oversell authority             | Human/commercially authorised, exact role unspecified                    | Brief distinguishes Traders pushing from commercial teams accepting risk           |
+| Exceptional capacity semantics | To be defined in solution                                                | Brief does not say whether Holds, Confirmations or particular Campaigns consume it |
 
 ---
 

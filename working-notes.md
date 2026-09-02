@@ -203,7 +203,8 @@ What matters to the booking design is their system role: they assemble campaign 
 ```
 
 **If I had more time :**
-If I had more time: I would clarify organisational accountability and campaign ownership, although neither changes the inventory contention model explored here.
+
+I would clarify organisational accountability and campaign ownership, although neither changes the inventory contention model explored here.
 
 ## Exception
 
@@ -228,12 +229,13 @@ That's a commercially plausible exception.
 If authorised:
 
 ```
-Physical capacity        6
-Confirmed                3
-Held                     3
-New confirmation        +1
+Physical capacity       6
+Confirmed               3
+Held precieved          3
+Hold released          -1  (needs **release mechanism**)
+New confirmation       +1  (1 hold exceptionally bypassed in favour of 1 confirmed)
                         ───
-Committed exposure       7
+Committed exposure       6
 
 Physical inventory       6
 ```
@@ -248,6 +250,19 @@ More generally:
 
 > “I know there are six physical units. Authorise us to sell seven.”
 
+If authorised:
+
+```
+Physical capacity        6
+Confirmed                3
+Held                     3
+New confirmation        +1
+                        ───
+Committed exposure       7
+
+Physical inventory       6
+```
+
 That's the explicit oversell case.
 
 ### Interpretation C — exception to hold policy itself
@@ -256,7 +271,7 @@ For example:
 
 > Extend my hold beyond its normal expiry.
 
-That's also linguistically possible, but the sentence immediately connects exceptions with “accept the risk of overselling”, so I think A/B are much more likely.
+**_That's also linguistically possible, but the sentence immediately connects exceptions with “accept the risk of overselling”, so I think B is much more likely._**
 
 I would interpret the requirement as:
 
@@ -274,7 +289,7 @@ I would interpret the requirement as:
 
 <img src="./public/img/high-level-domain-picture.png" width="800" alt="Assumed Domain Diagram">
 
-[Assumption domain Diagram](https://miro.com/app/board/uXjVHsfoN1o=/?share_link_id=989606232723)
+[Miro: Assumption domain Diagram](https://miro.com/app/board/uXjVHsfoN1o=/?share_link_id=989606232723)
 
 ## What consumes capacity?
 
@@ -354,7 +369,13 @@ After separating stated requirements from assumptions and ambiguities, the task 
 
 That is the core problem.
 
-# 6) Angle of choice
+## See my [Working Interpretation of the Technical Brief](appendix-working-Interpretation-of-the-technical-brief.md) in full
+
+_(Working interpretation, notes and assumptions contain ideas I later improved or rejected or updated.)_
+
+# 6) Responding to the taks:
+
+## Angle of choice
 
 ## **Booking lifecycle and contention: From trader intent through to authoritative inventory allocation.**
 
@@ -389,11 +410,11 @@ HUMAN / WORKFLOW WORLD
                          │
                          ▼
 
-════════════════════════════════════════════════════════ (BT)
+════════════════════════════════════════════════════════ (BT ↑)
 
                  CORRECTNESS BOUNDARY
 
-════════════════════════════════════════════════════════ (BB)
+════════════════════════════════════════════════════════ (BB ↓)
 
                          │
                          ▼
