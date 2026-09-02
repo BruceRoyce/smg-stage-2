@@ -167,6 +167,17 @@ Pending demand:
 
 That distinction prevents commercial intent from accidentally becoming inventory truth.
 
+<figure>
+    <img src="./public/img/one-demand-life-cycle.jpg" width="400">
+    <figcaption>A demand (full) life cycle - The sole way to confim is via an ACTIVE HOLD</figcaption>
+    
+</figure>
+<figure>
+    <img src="./public/img/hold-state-machine.jpg" width="400">
+    <figcaption>HOLD state machine diagram</figcaption>
+    
+</figure>
+
 ---
 
 # Quantity is conserved
