@@ -1252,7 +1252,7 @@ I would not assume all approvals automatically apply to both.
 
 Likewise, closing an allowance to **new use** does not erase historical coverage already consumed while it was valid.
 
-Whether an already-covered Hold may subsequently Confirm after closure depends on the allowance's confirmed-disposition policy.
+Whether an already-covered `Hold` may subsequently `Confirm` after closure depends on the allowance's confirmed-disposition policy.
 
 That is a business rule, not something I would hide inside arithmetic.
 
