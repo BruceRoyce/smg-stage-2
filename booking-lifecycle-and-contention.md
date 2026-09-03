@@ -64,6 +64,12 @@ flowchart TB
 
 I would start with a **modular application backed by PostgreSQL as the authoritative system of record**.
 
+<figure>
+<img src="public/img/system-boundaries-and-deployment.png" width="90%" alt="High level System boundaries and deployment" />
+
+<figcaption>High Level System boundaries and deployment</figcaption>
+</figure>
+
 The system naturally separates into four concerns:
 
 | Area                    | Responsibility                                                                        | Consistency                   |
@@ -1078,17 +1084,7 @@ approved_at
 status
 ```
 
-Physical capacity remains:
-
-```text
-6
-```
-
-It never becomes:
-
-```text
-7
-```
+Physical capacity remains: `6`. It never become `7`.
 
 For a command that is eligible to use the allowance:
 
