@@ -473,16 +473,21 @@ Audit / downstream consumers
 
 ## My line of development
 
-```text
-rough domain understanding
-        ↓
-ambiguities / assumptions
-        ↓
-finite contested capacity
-        ↓
-correctness boundary
-        ↓
-booking lifecycle + contention
+```mermaid
+flowchart TB
+
+    subgraph Approach["My Approach"]
+        direction TB
+        DomKnowledge["rough domain understanding"]
+        Clarity["ambiguities / assumptions"]
+        LimitCap["finite contested capacity"]
+        Correctness["correctness boundary"]
+        BookingCycle["booking lifecycle + contention"]
+        DomKnowledge --> Clarity
+        Clarity --> LimitCap
+        LimitCap --> Correctness
+        Correctness --> BookingCycle
+    end
 ```
 
 ## The design document itself is authoritative where the two differ

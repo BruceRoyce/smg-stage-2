@@ -134,7 +134,7 @@ The inventory lifecycle is separate.
 ```mermaid
 flowchart LR
 
-    DEMAND["REQUESTED DEMAND<br/><br/>Consumes no capacity"]
+    DEMAND["REQUESTED DEMAND<br/>/ PENDING<br/><br/>Consumes no capacity"]
 
     HELD["HELD<br/><br/>Temporary reservation<br/>Consumes capacity<br/>Has expiry"]
 
@@ -148,17 +148,9 @@ flowchart LR
     HELD -->|"Expiry"| RELEASED
 ```
 
-There is also:
+There is also `PENDING AVAILABILITY` which means _The advertiser still wants this quantity, but no capacity has been reserved_.
 
-```text
-PENDING AVAILABILITY
-```
-
-which means:
-
-> The advertiser still wants this quantity, but no capacity has been reserved.
-
-Pending demand:
+**Pending demand:**
 
 - consumes no capacity;
 - carries no guarantee;
@@ -178,9 +170,11 @@ That distinction prevents commercial intent from accidentally becoming inventory
     
 </figure>
 
+_Pending is a state to help Traders create their compaign before commit to any booking, including `Hold` (provisional/temp booking), or while awaiting for a `Hold` (such as in case of awaiting an `Exception`, etc.)._
+
 ---
 
-# Quantity is conserved
+# Quantity is (strictly) conserved
 
 For each demand item, quantity can move between dispositions,
 but must never disappear or be duplicated.
@@ -203,7 +197,7 @@ The invariant is:
 
 A transition may move quantity between states.
 
-It may not silently create, duplicate or lose quantity.
+It may not silently create, duplicate or lose quantity (no accidental shrinkage or growth).
 
 ---
 
@@ -223,32 +217,26 @@ to:
 
 More specifically:
 
-> **How does the system guarantee that concurrent legitimate actions cannot accidentally consume the same finite capacity?**
+**How does the system guarantee that concurrent legitimate actions cannot accidentally consume the same finite capacity?**
 
-That is the highest-risk engineering boundary in this problem.
+That I'd say is the highest-risk engineering boundary in this problem.
 
 The core invariant is:
 
-```text
-No successful allocation command may consume capacity
+**No successful allocation command may consume capacity
 that was neither physically available nor covered by
-valid prior commercial authority.
-```
+valid prior commercial authority.**
 
 ---
 
 # The authoritative inventory position
 
-I would maintain one `inventory_position` for each:
-
-```text
-(store_id, format_id, cycle_id)
-```
+I would maintain one `inventory_position` for each `(store_id, format_id, cycle_id)`.
 
 Conceptually:
 
 ```text
-inventory_position
+// inventory_position
 
 store_id
 format_id
@@ -280,30 +268,19 @@ Audit history
     = immutable material transition history
 ```
 
-I would **not** store a naked `available_quantity` as independent truth.
-
-Availability is derived.
+I would **not** store a naked `available_quantity` as independent truth. Because _Availability is derived._
 
 ---
 
-# Hold and Confirm answer different questions
+# `Hold` and `Confirm` answer different questions
 
 A useful distinction is:
 
-```text
-HOLD
-
-"May I reserve this capacity now?"
-```
+**`HOLD`:** _"May I reserve this capacity now?"_
 
 versus:
 
-```text
-CONFIRM
-
-"Is my reservation still valid,
-and may it now become committed?"
-```
+**`CONFIRM`:** _"Is my reservation still valid, and may it now become committed?"_
 
 ### Hold
 
@@ -313,7 +290,7 @@ It therefore carries the primary last-unit contention problem.
 
 ### Confirm
 
-Confirmation may not increase total consumed quantity:
+Confirmation may not increase total consumed quantity: (because it's usually converts a hold)
 
 ```text
 held      -1
@@ -331,9 +308,9 @@ It also needs to establish:
 - that it has not already been released or confirmed;
 - that any exceptional-capacity authority is valid for the **resulting confirmed disposition**.
 
-So Confirm is shorter than first-touch allocation.
+So `Confirm` is shorter than first-touch allocation.
 
-It is not lock-free.
+But, it is not lock-free.
 
 ---
 
@@ -354,7 +331,7 @@ on the affected `inventory_position`.
 
 I prefer explicit row locking here because:
 
-- contention is expected rather than unusual;
+- contention is _expected_ rather than unusual;
 - the number of concurrent traders is modest;
 - critical sections should be short;
 - the lock target maps directly to the business contention key;
@@ -368,7 +345,7 @@ The design does not rely on PostgreSQL-specific business semantics, but PostgreS
 
 A Hold command is approximately:
 
-```text
+```psudocode
 BEGIN
 
 1. Claim / validate idempotency key
@@ -405,6 +382,11 @@ bookable =
 
 9. If requested > bookable:
        write no allocation for this item
+       create terminal idempotent result:
+           outcome = capacity_conflict
+           requested_quantity = requested
+           offered_quantity = bookable
+           evaluated_at = now
        return conflict + non-binding offer
 
 10. If requested <= bookable (valid):
@@ -412,10 +394,12 @@ bookable =
        update InventoryPosition
        record allowance coverage if required
        record audit evidence
-       create/update commercial intervention if required
+       if resulting consumed > physical capacity:
+           create/update authorised-overcapacity (commercial) intervention
        write outbox event
-       retain idempotent result
-
+       create terminal idempotent result:
+           outcome = held
+           allocated_id = ...
 COMMIT
 ```
 
@@ -426,6 +410,81 @@ The important point is:
 The hot transaction does not scan years of allocation history.
 
 The current aggregate answers the allocation question; the underlying allocation facts and reconciliation prove that aggregate remains trustworthy.
+
+The idempotency point is:
+
+> A committed business outcome is idempotent whether it succeeded or legitimately failed. A rolled-back technical failure is not.
+
+---
+
+### 🙋‍♂️ Update:
+
+If I have more time think I can tighten up this transaction
+
+This will check the authority BEFORE allocation vs allocation and then check whether we can justify it afterwards
+
+```
+...
+7. Calculate ordinary availability:
+       consumed =
+           confirmed_quantity
+           + active_held_quantity
+
+       ordinary_available =
+           max(0, physical_capacity - consumed)
+
+8. Determine whether exceptional capacity is required:
+
+       exceptional_required =
+           max(0, requested - ordinary_available)
+
+9. If exceptional_required > 0:
+
+       find applicable PRIOR-approved extra-capacity allowance
+
+       lock allowance entitlement if required
+
+       validate:
+           correct Store × Format × Cycle scope
+           eligible actor / campaign / action
+           HOLD disposition permitted
+           allowance still available for new use
+           remaining allowance >= exceptional_required
+
+       if validation fails:
+           write no allocation
+
+           persist terminal idempotent result:
+               outcome = capacity_conflict
+               requested_quantity = requested
+               offered_quantity =
+                   ordinary_available
+                   + valid_authorised_extra_available
+
+           return conflict + non-binding offer
+
+10. If the full requested quantity is now authorised:
+
+       create Hold
+
+       update InventoryPosition
+
+       if exceptional_required > 0:
+           record durable allowance coverage
+           consume/reserve exceptional_required
+           against that allowance
+
+       record audit evidence
+
+       if resulting consumed > physical_capacity:
+           create/update authorised-overcapacity intervention
+
+       write outbox event
+
+       persist terminal idempotent result:
+           outcome = held
+           allocation_id = ...
+```
 
 ---
 
@@ -444,7 +503,9 @@ Available           1
 Trader A and Trader B have both already seen:
 
 ```text
-Available = 1
+Trader A                    Trader B
+---------                   ---------
+Available = 1               Available = 1
 ```
 
 Then:
@@ -575,7 +636,7 @@ Confirmation cannot resurrect it.
 
 # Expiry must not depend on a worker
 
-I would still run a background process to:
+I would still run a background process (hygiene process) to:
 
 - materialise expired status;
 - publish notifications;
@@ -620,7 +681,7 @@ A future direct allocate-and-confirm command could reuse the same authoritative 
 
 ## One allocation identity
 
-Hold creates one allocation record:
+`Hold` creates one allocation record:
 
 ```text
 allocation
@@ -635,18 +696,19 @@ expires_at    = ...
 confirmed_at  = null
 ```
 
-If exceptional capacity was required, the Hold transaction also records durable allowance coverage showing which prior authority permitted that capacity to be consumed.
+If exceptional capacity was required, the `Hold` transaction also records durable allowance coverage (ie. audit record) showing which prior authority permitted that capacity to be consumed.
 
-Confirm updates the **same allocation row**:
+`Confirm` updates the **same allocation row**:
 
 ```text
 status         held → confirmed
 confirmed_at   = authoritative database now
 ```
 
-`expires_at` is kept as history. After confirm it no longer governs activity.
+- `expires_at` is kept as historical evidence of the original `Hold`. It governs the allocation only while `status = held`; once `Confirmed`, the allocation does not expire when the former `Hold` deadline passes.
+- While the allocation is held, manual `Release` or expiry transitions that same allocation row to released or expired; `Confirm` transitions it to confirmed.
 
-`Release` and expiry also transition this same allocation identity:
+**`Confirmed` is terminal for this slice.**
 
 ```text
                  ┌──→ released
@@ -673,7 +735,7 @@ one current allocation identity
 an immutable history of how it changed
 ```
 
-For this slice I assume a Hold is confirmed in full. If a later requirement allows partial confirmation, that becomes an explicit quantity split whose resulting portions must still sum exactly to the original held quantity.
+For this slice, `Confirm` transitions the entire held quantity. If partial confirmation is later required, the held quantity must be split explicitly. For example into a confirmed portion and a remaining held or released portion, so quantity is conserved.
 
 ## Lock order
 
@@ -692,9 +754,11 @@ All inventory-mutating commands locks in the same order:
    when new or changed allowance entitlement is required
 ```
 
-Confirm locks the position before the hold row. Confirm does not take new extra capacity, so it does not need the allowance lock.
+`Confirm` locks the position before the hold row. `Confirm` does NOT take new extra capacity, so it does not need the allowance lock.
 
 A consistent global order removes a major class of deadlocks. Deadlock or serialisation failure is still treated as a retriable transaction outcome rather than assumed impossible.
+
+> Before I turn this `Hold` into a commitment, first make sure this isn't a retry. Use the database's clock. Lock the inventory key and the Hold so nobody can change the relevant state underneath me. If the Hold has already expired, materialise that expiry and refuse confirmation. If the Hold relied on exceptional capacity, prove that its prior authority allows that capacity to become Confirmed. Then transition the same allocation from Held to Confirmed, move the quantity between the held and confirmed counters, surface any authorised physical fulfilment risk, prove there is no unexplained overallocation, record the downstream event and idempotent result, and commit it atomically.
 
 ## The transaction
 
@@ -711,16 +775,23 @@ BEGIN
    then lock the allocation row
 
 4. Require:
+       allocation exists
        status = held
-       expires_at > now
        quantity is this hold's quantity
 
-   If expires_at <= now:
-       mark expired
-       active_held_quantity -= quantity
-       reject confirm
-       do not resurrect the hold
-       pending demand gets nothing
+   Evaluate expiry using authoritative database time:
+
+       if expires_at <= now:
+           status held → expired
+           active_held_quantity -= quantity
+           append HOLD_EXPIRED
+           store idempotent result:
+               outcome = confirm_rejected_expired
+           reject confirm
+
+       otherwise:
+           Hold is still active
+           continue
 
 5. If this hold used extra capacity,
    check the coverage stored at Hold time
@@ -748,6 +819,28 @@ BEGIN
    Store idempotent result
 
 COMMIT
+```
+
+There are actually three possible committed outcomes, not simply success/failure:
+
+```
+Confirm command
+      │
+      ├── Hold expired
+      │      → materialise expiry
+      │      → COMMIT
+      │      → return rejected-expired
+      │
+      ├── Hold active but confirmation authority invalid
+      │      → no allocation transition
+      │      → store rejected result
+      │      → COMMIT
+      │
+      └── Hold active + valid
+             → held → confirmed
+             → update aggregates/risk/outbox
+             → COMMIT
+             → return confirmed
 ```
 
 ## Why the position lock stays
@@ -1640,51 +1733,7 @@ None of these prevents the core concurrency design from being implemented safely
 
 # AI tooling reflection
 
-AI was useful as a **structure and pressure-testing tool**, not as architectural authority.
-
-## Where it helped
-
-It was useful for:
-
-- organising the four questions in the brief;
-- checking terminology consistency;
-- enumerating race conditions;
-- challenging the design with stale clients, retries and worker delays;
-- producing initial architecture diagrams and alternative presentations.
-
-## Where I pushed back
-
-Some plausible-looking suggestions were wrong or too loose.
-
-Examples included:
-
-- making Confirm lock-free because total consumption does not change;
-- treating all physical overcapacity as “oversell” without distinguishing valid authority;
-- allowing state diagrams where Confirmed inventory flows back into Released;
-- treating stale partial acceptance as permission to silently shrink the quantity;
-- treating an allowance as a global increase in physical capacity.
-
-Those are exactly the kinds of mistakes that sound reasonable until the invariant is made explicit.
-
-## What I retained ownership of
-
-I would personally defend:
-
-- the choice of angle;
-- the contention key;
-- availability being a snapshot rather than truth;
-- the use of a single authoritative allocation path;
-- the fungible-capacity model;
-- quantity conservation;
-- the distinction between authorised commercial risk and uncovered overallocation.
-
-AI can help ask:
-
-> “What race have you forgotten?”
-
-It should not decide what the business is allowed to promise.
-
----
+👉 See [AI tooling reflection](./ai_tooling_reflection.md)
 
 # What I would build next
 
